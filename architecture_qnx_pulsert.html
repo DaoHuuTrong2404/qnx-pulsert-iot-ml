@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>QNX-PulseRT — Architecture &amp; Cover</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 36px;
+    background: radial-gradient(circle at 80% 10%, #0f2c3f 0%, #090e16 58%, #06090f 100%);
+    color: #f1f5f9;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  .canvas {
+    max-width: 1320px;
+    margin: 0 auto;
+    border: 1px solid #243447;
+    border-radius: 18px;
+    padding: 34px;
+    background: linear-gradient(160deg, rgba(15,23,36,0.97), rgba(9,14,22,0.98));
+    box-shadow: 0 24px 60px rgba(0,0,0,0.65);
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid #243447;
+  }
+  .tag {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+  }
+  h1 {
+    margin: 12px 0 6px;
+    font-size: 38px;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .subtitle {
+    margin: 0;
+    font-size: 17px;
+    color: #94a3b8;
+    max-width: 780px;
+  }
+  .meta-box {
+    text-align: right;
+    font-family: Consolas, monospace;
+    font-size: 13px;
+    color: #94a3b8;
+    background: #0b111b;
+    border: 1px solid #243447;
+    padding: 14px 18px;
+    border-radius: 12px;
+  }
+  .meta-box strong {
+    display: block;
+    color: #2dd4bf;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+  .arch-grid {
+    margin-top: 26px;
+    display: grid;
+    grid-template-columns: 1fr 78px 1fr 72px 1fr;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .node {
+    background: #0e1726;
+    border: 1px solid #26394f;
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .node.prio-high { border-color: rgba(56, 189, 248, 0.55); }
+  .node.prio-mid { border-color: rgba(45, 212, 191, 0.55); }
+  .node.prio-low { border-color: rgba(251, 191, 36, 0.5); }
+  .kicker {
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+  .node h2 { margin: 6px 0 10px; font-size: 19px; }
+  .node ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13.5px;
+    color: #cbd5e1;
+    line-height: 1.55;
+  }
+  .arrow {
+    display: grid;
+    place-items: center;
+    text-align: center;
+    font-family: Consolas, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: #2dd4bf;
+    white-space: nowrap;
+  }
+  .metrics-row {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .mcard {
+    background: #0b111b;
+    border: 1px solid #243447;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .mcard span {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+  .mcard strong {
+    display: block;
+    margin-top: 6px;
+    font-family: Consolas, monospace;
+    font-size: 22px;
+    color: #38bdf8;
+  }
+  .mcard small {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+  .footer-proof {
+    margin-top: 24px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: rgba(45, 212, 191, 0.09);
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    display: flex;
+    justify-content: space-between;
+    font-family: Consolas, monospace;
+    font-size: 13.5px;
+    color: #ccfbf1;
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="header">
+      <div>
+        <span class="tag">QNX Global Hackathon 2026 · IoT &amp; Machine Learning/AI</span>
+        <h1>QNX-PulseRT</h1>
+        <p class="subtitle">
+          Deterministic Q15 Fixed-Point TinyML Anomaly Detection over Synchronous QNX Neutrino IPC
+          with Formal Response-Time Analysis &amp; Priority Inheritance Verification
+        </p>
+      </div>
+      <div class="meta-box">
+        <strong>QNX SDP 8.0 · Neutrino RTOS</strong>
+        Policy: SCHED_FIFO + PI Mutex (45 us)<br />
+        IPC: ChannelCreate / MsgSend / MsgReply<br />
+        TinyML: Zero-Heap 4-&gt;6-&gt;1 Q1.15 MLP
+      </div>
+    </div>
+
+    <div class="arch-grid">
+      <div class="node prio-high">
+        <span class="kicker">Task 0 · Priority 40 · 500 Hz</span>
+        <h2>sensor_ingest_fifo</h2>
+        <ul>
+          <li>WCET C0 = 220 us, Period T0 = 2000 us</li>
+          <li>Samples Vibration RMS, Temp, Current, Kurtosis in Q15</li>
+          <li>Computes CRC-16 CCITT frame seal</li>
+          <li>Dispatches via synchronous <code>MsgSend()</code></li>
+        </ul>
+      </div>
+      <div class="arrow">MsgSend</div>
+      <div class="node prio-mid">
+        <span class="kicker">Task 1 · Priority 30 · 500 Hz</span>
+        <h2>qnx_ml_infer_srv</h2>
+        <ul>
+          <li>WCET C1 = 380 us, Period T1 = 2000 us</li>
+          <li>Blocks cleanly on <code>MsgReceive()</code></li>
+          <li>Zero-malloc Q15 MAC + Saturating ReLU (6 hidden neurons)</li>
+          <li>Returns NOMINAL / WARNING / CRITICAL_TRIP via <code>MsgReply()</code></li>
+        </ul>
+      </div>
+      <div class="arrow">IPC + PI</div>
+      <div class="node prio-low">
+        <span class="kicker">Task 2 · Priority 12 · 100 Hz</span>
+        <h2>aps_telemetry_log</h2>
+        <ul>
+          <li>WCET C2 = 950 us, Period T2 = 10000 us</li>
+          <li>Holds shared IPC ring mutex for B = 45 us</li>
+          <li>QNX Priority Inheritance caps priority inversion across higher tasks</li>
+          <li>Logs deterministic telemetry &amp; overload alerts</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="metrics-row">
+      <div class="mcard">
+        <span>CPU Utilization (U)</span>
+        <strong>0.3950</strong>
+        <small>Below Liu-Layland 0.7798 bound</small>
+      </div>
+      <div class="mcard">
+        <span>Analytical RTA R_i</span>
+        <strong>[265, 645, 1550] us</strong>
+        <small>All deadlines strictly satisfied</small>
+      </div>
+      <div class="mcard">
+        <span>1-us Event Sim R_i</span>
+        <strong>[265, 645, 1550] us</strong>
+        <small>Microsecond exact match (0 misses)</small>
+      </div>
+      <div class="mcard">
+        <span>Q15 Max Quant Error</span>
+        <strong>0.000181</strong>
+        <small>vs IEEE-754 float64 reference</small>
+      </div>
+    </div>
+
+    <div class="footer-proof">
+      <span>DUAL VERIFIED: Python 1-us Hyperperiod + RTA Proof · Node Parity Suite on docs/index.html</span>
+      <span>Priority Inversion Storm Stress Tested (Detects Misses Live)</span>
+    </div>
+  </div>
+</body>
+</html>

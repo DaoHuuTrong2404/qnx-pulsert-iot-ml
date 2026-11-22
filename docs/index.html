@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QNX-PulseRT — Deterministic RTOS Edge ML Telemetry &amp; Scheduler</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: hsl(212, 32%, 7%);
+        --surface: hsl(212, 26%, 11%);
+        --surface-2: hsl(212, 22%, 15%);
+        --border: hsla(210, 30%, 70%, 0.11);
+        --text: hsl(210, 28%, 94%);
+        --muted: hsl(210, 14%, 60%);
+        --primary: hsl(200, 92%, 55%);
+        --primary-glow: hsla(200, 92%, 55%, 0.25);
+        --accent: hsl(164, 78%, 48%);
+        --warn: hsl(36, 94%, 56%);
+        --danger: hsl(0, 82%, 62%);
+        --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+        transition-duration: 150ms;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        max-width: 100vw;
+        overflow-x: hidden;
+        background: radial-gradient(ellipse at 50% 0%, hsl(210, 36%, 13%) 0%, var(--bg) 68%);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .shell {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px 16px 48px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .hero-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 24px;
+        border-radius: 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--primary);
+        background: hsla(200, 92%, 55%, 0.12);
+        border: 1px solid hsla(200, 92%, 55%, 0.35);
+        margin-bottom: 8px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.15;
+      }
+
+      .sub {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        max-width: 65ch;
+      }
+
+      .status-pill {
+        min-height: 44px;
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid hsla(164, 78%, 48%, 0.45);
+        background: hsla(164, 78%, 48%, 0.12);
+        color: var(--accent);
+      }
+
+      .status-pill.miss {
+        border-color: hsla(0, 82%, 62%, 0.55);
+        background: hsla(0, 82%, 62%, 0.14);
+        color: var(--danger);
+      }
+
+      .scenario-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        border-color: var(--primary);
+        background: hsl(212, 24%, 19%);
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: hsl(212, 40%, 8%);
+        font-weight: 700;
+        box-shadow: 0 4px 20px var(--primary-glow);
+      }
+
+      .btn-warn {
+        border-color: hsla(36, 94%, 56%, 0.45);
+        color: var(--warn);
+      }
+
+      .btn-danger {
+        border-color: hsla(0, 82%, 62%, 0.45);
+        color: var(--danger);
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      .kpi-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+
+      .kpi-val {
+        margin-top: 4px;
+        font-family: var(--mono);
+        font-size: 22px;
+        font-weight: 700;
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: 1.25fr 0.95fr;
+        gap: 16px;
+      }
+
+      .panel-title {
+        margin: 0 0 12px;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: hsl(200, 60%, 80%);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      canvas {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 8px;
+        background: hsl(212, 34%, 8%);
+        border: 1px solid var(--border);
+      }
+
+      .slider-group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .slider-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        background: hsl(212, 28%, 9%);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+      }
+
+      .slider-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .mono {
+        font-family: var(--mono);
+      }
+
+      input[type='range'] {
+        width: 100%;
+        min-height: 32px;
+        accent-color: var(--primary);
+        cursor: pointer;
+      }
+
+      .rta-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+
+      .rta-table th,
+      .rta-table td {
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .rta-table th {
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .badge-ok {
+        background: hsla(164, 78%, 48%, 0.16);
+        color: var(--accent);
+      }
+
+      .badge-warn {
+        background: hsla(36, 94%, 56%, 0.18);
+        color: var(--warn);
+      }
+
+      .badge-crit {
+        background: hsla(0, 82%, 62%, 0.18);
+        color: var(--danger);
+      }
+
+      .ipc-log {
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.5;
+        background: hsl(212, 34%, 7%);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        max-height: 220px;
+        overflow-y: auto;
+        color: hsl(200, 30%, 84%);
+      }
+
+      @media (max-width: 900px) {
+        .main-grid {
+          grid-template-columns: 1fr;
+        }
+        .kpi-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero-bar">
+        <div>
+          <div class="eyebrow">QNX SDP 8.0 · Neutrino IPC · Fixed-Point TinyML</div>
+          <h1>QNX-PulseRT Edge Telemetry &amp; RTOS Scheduler</h1>
+          <p class="sub">
+            Zero-heap Q15 MLP anomaly scoring over synchronous <code>MsgSend</code>/<code>MsgReceive</code> IPC
+            with formal Fixed-Point Response-Time Analysis (RTA) and Priority Inheritance verification.
+          </p>
+        </div>
+        <div class="status-pill" id="rta-pill">● RTA SCHEDULABLE (PASS)</div>
+      </header>
+
+      <section class="scenario-row" aria-label="Telemetry and RTOS presets">
+        <button type="button" class="btn btn-primary" id="btn-nominal">▶ Nominal 500 Hz Loop</button>
+        <button type="button" class="btn btn-warn" id="btn-thermal">🌡 Inject Thermal Drift</button>
+        <button type="button" class="btn btn-danger" id="btn-bearing">⚡ Inject Bearing Fault</button>
+        <button type="button" class="btn btn-danger" id="btn-storm">🔥 Priority Inversion Storm</button>
+        <button type="button" class="btn" id="btn-toggle-pause">⏸ Pause Stream</button>
+      </section>
+
+      <section class="kpi-grid" aria-label="Real-time RTOS metrics">
+        <div class="card">
+          <div class="kpi-label">CPU Utilization (U)</div>
+          <div class="kpi-val" id="kpi-util">0.3950</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Liu-Layland Bound</div>
+          <div class="kpi-val" id="kpi-ll">0.7798</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Q15 Anomaly Score</div>
+          <div class="kpi-val" id="kpi-q15">0.241</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Infer Worst R₁ / D₁</div>
+          <div class="kpi-val" id="kpi-r1">645 / 2000us</div>
+        </div>
+      </section>
+
+      <section class="main-grid">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="card">
+            <h2 class="panel-title">
+              <span>Preemptive SCHED_FIFO + QNX Priority Inheritance Gantt (2.5 ms Window)</span>
+              <span class="mono" style="font-size: 11px; color: var(--muted);" id="sim-miss-label">0 misses</span>
+            </h2>
+            <canvas id="gantt-canvas" width="680" height="210" aria-label="RTOS Gantt chart"></canvas>
+          </div>
+
+          <div class="card">
+            <h2 class="panel-title">
+              <span>Live Q15 Fixed-Point TinyML Telemetry Waveform</span>
+              <span class="badge badge-ok" id="tier-badge">NOMINAL</span>
+            </h2>
+            <canvas id="wave-canvas" width="680" height="200" aria-label="Telemetry anomaly score waveform"></canvas>
+          </div>
+
+          <div class="card">
+            <h2 class="panel-title"><span>Synchronous IPC &amp; Q15 Frame Audit Log</span></h2>
+            <div class="ipc-log" id="ipc-log"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="card">
+            <h2 class="panel-title"><span>QNX Task WCET &amp; IPC Critical Section Controls</span></h2>
+            <div class="slider-group">
+              <div class="slider-row">
+                <div class="slider-head">
+                  <span>sensor_ingest_fifo (Prio 40, T=2000us)</span>
+                  <span class="mono" id="val-c0">220 us</span>
+                </div>
+                <input type="range" id="sl-c0" min="80" max="900" step="10" value="220" aria-label="sensor ingest WCET" />
+              </div>
+              <div class="slider-row">
+                <div class="slider-head">
+                  <span>qnx_ml_infer_srv (Prio 30, T=2000us)</span>
+                  <span class="mono" id="val-c1">380 us</span>
+                </div>
+                <input type="range" id="sl-c1" min="100" max="1100" step="10" value="380" aria-label="inference server WCET" />
+              </div>
+              <div class="slider-row">
+                <div class="slider-head">
+                  <span>aps_telemetry_log (Prio 12, T=10000us)</span>
+                  <span class="mono" id="val-c2">950 us</span>
+                </div>
+                <input type="range" id="sl-c2" min="200" max="4500" step="50" value="950" aria-label="telemetry logger WCET" />
+              </div>
+              <div class="slider-row">
+                <div class="slider-head">
+                  <span>Shared IPC Mutex Blocking B (QNX PI)</span>
+                  <span class="mono" id="val-b">45 us</span>
+                </div>
+                <input type="range" id="sl-b" min="0" max="250" step="5" value="45" aria-label="blocking critical section" />
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2 class="panel-title"><span>Exact Fixed-Point RTA Schedulability Table</span></h2>
+            <table class="rta-table">
+              <thead>
+                <tr>
+                  <th>Task (Priority)</th>
+                  <th>WCET</th>
+                  <th>Exact R_i</th>
+                  <th>Sim R_i</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="rta-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h2 class="panel-title"><span>Q15 Fixed-Point Sensor Vector (Int16)</span></h2>
+            <table class="rta-table">
+              <thead>
+                <tr>
+                  <th>Channel</th>
+                  <th>Raw Q15</th>
+                  <th>Normalized</th>
+                </tr>
+              </thead>
+              <tbody id="feat-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      // Exact weights matching src/qnx/telemetry_protocol.hpp and verify_qnx_scheduler.py
+      const W1 = [
+        [11469, 8192, 4915, 9830],
+        [-6554, 13107, 6554, 3277],
+        [9830, -4915, 11469, 8192],
+        [4915, 9830, -3277, 13107],
+        [-11469, -6554, -4915, -3277],
+        [8192, 8192, 8192, 8192],
+      ];
+      const B1 = [-4096, -3277, -3604, -4915, 2458, -5734];
+      const W2 = [10650, 9830, 8192, 11469, -6554, 12288];
+      const B2 = -3277;
+
+      function runQ15Mlp(x) {
+        const hidden = [];
+        for (let h = 0; h < 6; h++) {
+          let acc = B1[h];
+          for (let i = 0; i < 4; i++) {
+            acc += (x[i] * W1[h][i]) >> 15;
+          }
+          hidden.push(acc > 0 ? Math.min(32767, acc) : 0);
+        }
+        let out = B2;
+        for (let h = 0; h < 6; h++) {
+          out += (hidden[h] * W2[h]) >> 14;
+        }
+        return Math.max(0, Math.min(32767, 16384 + (out >> 1)));
+      }
+
+      function computeRta(tasks) {
+        const n = tasks.length;
+        const util = tasks.reduce((s, t) => s + t.wcet / t.period, 0);
+        const llBound = n * (Math.pow(2, 1 / n) - 1);
+        let exactSched = true;
+        const out = tasks.map((ti, i) => {
+          let r = ti.wcet + ti.blocking;
+          let ok = false;
+          for (let iter = 0; iter < 512; iter++) {
+            let nxt = ti.wcet + ti.blocking;
+            for (let j = 0; j < n; j++) {
+              if (i !== j && tasks[j].priority > ti.priority) {
+                nxt += Math.ceil(r / tasks[j].period) * tasks[j].wcet;
+              }
+            }
+            if (nxt > ti.deadline) {
+              r = nxt;
+              ok = false;
+              break;
+            }
+            if (Math.abs(nxt - r) < 1e-6) {
+              r = nxt;
+              ok = true;
+              break;
+            }
+            r = nxt;
+          }
+          if (!ok) exactSched = false;
+          return { ...ti, response: r, schedulable: ok };
+        });
+        return { util, llBound, exactSched, tasks: out };
+      }
+
+      function simulateFifoWindow(tasks, windowUs, sharedCsUs) {
+        const rem = tasks.map(() => 0);
+        const rel = tasks.map(() => 0);
+        const maxResp = tasks.map(() => 0);
+        const misses = tasks.map(() => 0);
+        const timeline = new Int8Array(windowUs).fill(-1);
+        const piBoost = new Uint8Array(windowUs);
+        const lowIdx = tasks.reduce((best, t, i) => (t.priority < tasks[best].priority ? i : best), 0);
+        let csRem = sharedCsUs;
+
+        for (let t = 0; t < windowUs; t++) {
+          for (let i = 0; i < tasks.length; i++) {
+            if (t % tasks[i].period === 0) {
+              if (rem[i] > 0) misses[i]++;
+              rem[i] += tasks[i].wcet;
+              rel[i] = t;
+            }
+          }
+          let active = -1;
+          if (csRem > 0) {
+            active = lowIdx;
+            piBoost[t] = 1;
+            csRem--;
+            if (rem[active] > 0) rem[active]--;
+          } else {
+            let bestPrio = -1;
+            for (let i = 0; i < tasks.length; i++) {
+              if (rem[i] > 0 && tasks[i].priority > bestPrio) {
+                bestPrio = tasks[i].priority;
+                active = i;
+              }
+            }
+            if (active >= 0) rem[active]--;
+          }
+          timeline[t] = active;
+          if (active >= 0 && rem[active] === 0) {
+            const resp = t + 1 - rel[active];
+            if (resp > maxResp[active]) maxResp[active] = resp;
+            if (resp > tasks[active].deadline) misses[active]++;
+          }
+        }
+        return { timeline, piBoost, maxResp, misses };
+      }
+
+      const state = {
+        c0: 220,
+        c1: 380,
+        c2: 950,
+        b: 45,
+        faultMode: 'nominal',
+        paused: false,
+        seq: 1,
+        wave: [],
+        logs: [],
+      };
+
+      const slC0 = document.getElementById('sl-c0');
+      const slC1 = document.getElementById('sl-c1');
+      const slC2 = document.getElementById('sl-c2');
+      const slB = document.getElementById('sl-b');
+
+      function getTasks() {
+        return [
+          { name: 'sensor_ingest_fifo', priority: 40, wcet: state.c0, period: 2000, deadline: 2000, blocking: state.b },
+          { name: 'qnx_ml_infer_srv', priority: 30, wcet: state.c1, period: 2000, deadline: 2000, blocking: state.b },
+          { name: 'aps_telemetry_log', priority: 12, wcet: state.c2, period: 10000, deadline: 10000, blocking: 0 },
+        ];
+      }
+
+      function renderSchedule() {
+        document.getElementById('val-c0').textContent = `${state.c0} us`;
+        document.getElementById('val-c1').textContent = `${state.c1} us`;
+        document.getElementById('val-c2').textContent = `${state.c2} us`;
+        document.getElementById('val-b').textContent = `${state.b} us`;
+
+        const tasks = getTasks();
+        const rta = computeRta(tasks);
+        const sim = simulateFifoWindow(tasks, 2500, state.b);
+        const fullSim = simulateFifoWindow(tasks, 10000, state.b);
+        const totalMisses = fullSim.misses.reduce((a, b) => a + b, 0);
+
+        document.getElementById('kpi-util').textContent = rta.util.toFixed(4);
+        document.getElementById('kpi-ll').textContent = rta.llBound.toFixed(4);
+        document.getElementById('kpi-r1').textContent = `${Math.round(rta.tasks[1].response)} / 2000us`;
+        document.getElementById('sim-miss-label').textContent = `${totalMisses} misses (10ms hyperperiod)`;
+
+        const pill = document.getElementById('rta-pill');
+        if (rta.exactSched && totalMisses === 0) {
+          pill.className = 'status-pill';
+          pill.textContent = '● RTA SCHEDULABLE (PASS)';
+        } else {
+          pill.className = 'status-pill miss';
+          pill.textContent = '▲ DEADLINE OVERRUN DETECTED';
+        }
+
+        const tbody = document.getElementById('rta-tbody');
+        tbody.innerHTML = '';
+        rta.tasks.forEach((t, idx) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${t.name}</strong> <span class="mono" style="color:var(--muted)">(P${t.priority})</span></td>
+            <td class="mono">${t.wcet}us</td>
+            <td class="mono">${Math.round(t.response)}us</td>
+            <td class="mono">${fullSim.maxResp[idx]}us</td>
+            <td><span class="badge ${t.schedulable ? 'badge-ok' : 'badge-crit'}">${t.schedulable ? 'PASS' : 'MISS'}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        drawGantt(tasks, sim);
+      }
+
+      function drawGantt(tasks, sim) {
+        const canvas = document.getElementById('gantt-canvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const padL = 138;
+        const padR = 14;
+        const plotW = W - padL - padR;
+        const rowColors = ['#38BDF8', '#34D399', '#FBBF24'];
+        const labels = ['sensor_ingest (P40)', 'ml_infer_srv (P30)', 'aps_log (P12)'];
+
+        // Grid ticks every 500 us
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillStyle = '#8fa4b8';
+        ctx.font = '11px JetBrains Mono, monospace';
+        for (let us = 0; us <= 2500; us += 500) {
+          const x = padL + (us / 2500) * plotW;
+          ctx.beginPath();
+          ctx.moveTo(x, 16);
+          ctx.lineTo(x, H - 26);
+          ctx.stroke();
+          ctx.fillText(`${us}us`, x - 14, H - 8);
+        }
+
+        // Deadline marker at 2000us
+        const dx = padL + (2000 / 2500) * plotW;
+        ctx.strokeStyle = 'rgba(248, 113, 113, 0.7)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(dx, 14);
+        ctx.lineTo(dx, H - 26);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        for (let row = 0; row < 3; row++) {
+          const y = 26 + row * 52;
+          ctx.fillStyle = '#dce8f2';
+          ctx.font = '12px Inter, sans-serif';
+          ctx.fillText(labels[row], 10, y + 20);
+          ctx.fillStyle = 'rgba(255,255,255,0.03)';
+          ctx.fillRect(padL, y, plotW, 30);
+
+          for (let t = 0; t < 2500; t += 4) {
+            const act = sim.timeline[t];
+            if (act === row) {
+              const x = padL + (t / 2500) * plotW;
+              const bw = Math.max(1.5, (4 / 2500) * plotW);
+              ctx.fillStyle = sim.piBoost[t] ? '#FB7185' : rowColors[row];
+              ctx.fillRect(x, y + 3, bw, 24);
+            }
+          }
+        }
+        ctx.fillStyle = '#FB7185';
+        ctx.font = '11px Inter, sans-serif';
+        ctx.fillText('Pink block = Priority Inheritance boost (mutex CS)', padL, 14);
+      }
+
+      function stepTelemetry() {
+        if (state.paused) return;
+        const s = state.seq++;
+        const noise = Math.round(Math.sin(s * 0.45) * 1400);
+        let feat;
+        if (state.faultMode === 'nominal') {
+          feat = [4600 + noise, 5200, 4100, 3900 + Math.round(noise / 2)];
+        } else if (state.faultMode === 'thermal') {
+          const drift = Math.min(22000, 8000 + (s % 40) * 520);
+          feat = [9500 + noise, drift, 12400, 10800];
+        } else {
+          feat = [26500 + Math.round(noise / 2), 18200, 14500, 27400];
+        }
+        feat = feat.map((v) => Math.max(-32768, Math.min(32767, v)));
+        const scoreQ15 = runQ15Mlp(feat);
+        const normScore = scoreQ15 / 32768;
+        state.wave.push(normScore);
+        if (state.wave.length > 90) state.wave.shift();
+
+        document.getElementById('kpi-q15').textContent = normScore.toFixed(3);
+        const tierBadge = document.getElementById('tier-badge');
+        let tierName = 'NOMINAL';
+        if (scoreQ15 >= 24576) {
+          tierName = 'CRITICAL_TRIP';
+          tierBadge.className = 'badge badge-crit';
+        } else if (scoreQ15 >= 17695) {
+          tierName = 'WARNING';
+          tierBadge.className = 'badge badge-warn';
+        } else {
+          tierBadge.className = 'badge badge-ok';
+        }
+        tierBadge.textContent = tierName;
+
+        const names = ['vibration_rms', 'bearing_temp', 'phase_current', 'acoustic_kurtosis'];
+        const fbody = document.getElementById('feat-tbody');
+        fbody.innerHTML = '';
+        feat.forEach((v, idx) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${names[idx]}</td><td class="mono">${v}</td><td class="mono">${(v / 32768).toFixed(3)}</td>`;
+          fbody.appendChild(tr);
+        });
+
+        const logBox = document.getElementById('ipc-log');
+        const execUs = Math.round(state.c1 * (0.72 + (s % 5) * 0.04));
+        const line = `[seq=${String(s).padStart(4, '0')}] MsgSend->MsgReply exec=${execUs}us score_q15=${scoreQ15} (${normScore.toFixed(3)}) tier=${tierName}`;
+        state.logs.unshift(line);
+        if (state.logs.length > 18) state.logs.pop();
+        logBox.textContent = state.logs.join('\n');
+
+        drawWave();
+      }
+
+      function drawWave() {
+        const canvas = document.getElementById('wave-canvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        // Threshold lines (0.54 warn, 0.75 trip)
+        const yWarn = H - 0.54 * (H - 30) - 15;
+        const yCrit = H - 0.75 * (H - 30) - 15;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
+        ctx.beginPath();
+        ctx.moveTo(0, yWarn);
+        ctx.lineTo(W, yWarn);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(248, 113, 113, 0.65)';
+        ctx.beginPath();
+        ctx.moveTo(0, yCrit);
+        ctx.lineTo(W, yCrit);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (state.wave.length < 2) return;
+        ctx.strokeStyle = '#38BDF8';
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        state.wave.forEach((val, idx) => {
+          const x = (idx / 89) * (W - 20) + 10;
+          const y = H - val * (H - 30) - 15;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      function syncSlidersFromState() {
+        slC0.value = String(state.c0);
+        slC1.value = String(state.c1);
+        slC2.value = String(state.c2);
+        slB.value = String(state.b);
+        renderSchedule();
+      }
+
+      [slC0, slC1, slC2, slB].forEach((el) => {
+        el.addEventListener('input', () => {
+          state.c0 = Number(slC0.value);
+          state.c1 = Number(slC1.value);
+          state.c2 = Number(slC2.value);
+          state.b = Number(slB.value);
+          renderSchedule();
+        });
+      });
+
+      document.getElementById('btn-nominal').addEventListener('click', () => {
+        state.c0 = 220;
+        state.c1 = 380;
+        state.c2 = 950;
+        state.b = 45;
+        state.faultMode = 'nominal';
+        syncSlidersFromState();
+      });
+      document.getElementById('btn-thermal').addEventListener('click', () => {
+        state.faultMode = 'thermal';
+        stepTelemetry();
+      });
+      document.getElementById('btn-bearing').addEventListener('click', () => {
+        state.faultMode = 'bearing';
+        stepTelemetry();
+      });
+      document.getElementById('btn-storm').addEventListener('click', () => {
+        state.c0 = 820;
+        state.c1 = 1050;
+        state.c2 = 2600;
+        state.b = 240;
+        state.faultMode = 'bearing';
+        syncSlidersFromState();
+      });
+      document.getElementById('btn-toggle-pause').addEventListener('click', (e) => {
+        state.paused = !state.paused;
+        e.currentTarget.textContent = state.paused ? '▶ Resume Stream' : '⏸ Pause Stream';
+      });
+
+      syncSlidersFromState();
+      for (let i = 0; i < 24; i++) stepTelemetry();
+      window.setInterval(stepTelemetry, 350);
+    </script>
+  </body>
+</html>
